@@ -9,8 +9,8 @@ import socket
 import datetime
 
 # === CONFIG ===
-WEATHER_API_KEY = "YOUR_API_KEY"
-CITY = "New York"
+WEATHER_API_KEY = "7c5e741ce46b209653866485f0ab8ba7"
+CITY = "Boston"
 
 class DashboardApp:
     def __init__(self, root):
