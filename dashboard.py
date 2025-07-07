@@ -9,9 +9,13 @@ import os
 
 # === CONFIG ===
 WEATHER_API_KEY = "7c5e741ce46b209653866485f0ab8ba7"
+STORMGLASS_API_KEY = "8bfbc2a0-5ad7-11f0-bed1-0242ac130006-8bfbc304-5ad7-11f0-bed1-0242ac130006"
 CITY = "Boston"
-ICON_DIR = "icons"       # static PNG icons (sun.png, moon.png)
-GIF_DIR = "gifs"         # animated GIFs (clear.gif, rain.gif, etc.)
+LAT = 42.4194      # Nahant Beach
+LON = -70.9170
+
+ICON_DIR = "icons"
+GIF_DIR = "gifs"
 
 class DashboardApp:
     def __init__(self, root):
@@ -21,24 +25,30 @@ class DashboardApp:
         self.root.attributes('-topmost', True)
         self.root.configure(bg="#101820")
 
-        self.font_large = ("Arial", 36, "bold")
-        self.font_medium = ("Arial", 24)
-        self.font_small = ("Arial", 14)
+        self.font_large = ("Arial", 48, "bold")
+        self.font_medium = ("Arial", 32)
+        self.font_small = ("Arial", 20)
 
         self.time_label = tk.Label(root, font=self.font_large, fg="white", bg="#101820")
-        self.time_label.pack(pady=10)
+        self.time_label.pack(pady=20)
 
         self.icon_frame = tk.Frame(root, bg="#101820")
         self.icon_frame.pack()
 
         self.day_night_label = tk.Label(self.icon_frame, bg="#101820")
-        self.day_night_label.pack(side=tk.LEFT, padx=20)
+        self.day_night_label.pack(side=tk.LEFT, padx=30)
 
         self.weather_icon_label = tk.Label(self.icon_frame, bg="#101820")
-        self.weather_icon_label.pack(side=tk.LEFT, padx=20)
+        self.weather_icon_label.pack(side=tk.LEFT, padx=30)
 
         self.weather_label = tk.Label(root, font=self.font_medium, fg="white", bg="#101820")
-        self.weather_label.pack(pady=10)
+        self.weather_label.pack(pady=15)
+
+        self.extended_weather_label = tk.Label(root, font=self.font_small, fg="white", bg="#101820", justify=tk.LEFT)
+        self.extended_weather_label.pack(pady=5)
+
+        self.ocean_label = tk.Label(root, font=self.font_small, fg="white", bg="#101820", justify=tk.LEFT)
+        self.ocean_label.pack(pady=10)
 
         self.system_label = tk.Label(root, font=self.font_small, fg="white", bg="#101820", justify=tk.LEFT)
         self.system_label.pack(pady=10)
@@ -52,7 +62,7 @@ class DashboardApp:
 
         self.update_time()
         self.update_weather()
-        self.update_system_info()
+        self.update_ocean_data()
 
     def update_time(self):
         now = datetime.datetime.now()
@@ -69,7 +79,7 @@ class DashboardApp:
             'clear': 'clear.gif',
             'clouds': 'clouds.gif',
             'rain': 'rain.gif',
-            'drizzle': 'rain.gif',
+            'drizzle': 'drizzle.gif',
             'thunderstorm': 'thunderstorm.gif',
             'snow': 'snow.gif'
         }
@@ -92,37 +102,78 @@ class DashboardApp:
                 if "main" in data:
                     temp = data["main"]["temp"]
                     cond = data["weather"][0]["main"]
+                    humidity = data["main"]["humidity"]
+                    clouds = data["clouds"]["all"]
+
                     self.weather_label.config(text=f"{CITY}\n{cond}, {temp:.1f}°F")
 
-                    # Day/night icon
-                    dn = Image.open(self.get_day_night_path()).resize((80, 80))
+                    # Icons
+                    dn = Image.open(self.get_day_night_path()).resize((100, 100))
                     self.day_night_img = ImageTk.PhotoImage(dn)
                     self.day_night_label.config(image=self.day_night_img)
 
-                    # Animated weather GIF
                     gif = Image.open(self.get_weather_gif_path(cond))
-                    self.gif_frames = [ImageTk.PhotoImage(frame.resize((80,80))) for frame in ImageSequence.Iterator(gif)]
+                    self.gif_frames = [ImageTk.PhotoImage(frame.resize((100, 100))) for frame in ImageSequence.Iterator(gif)]
                     self.gif_index = 0
                     self.animate_weather_icon()
+
+                    # UV + Dew Point
+                    uv_url = f"https://api.openweathermap.org/data/2.5/onecall?lat={LAT}&lon={LON}&exclude=minutely,hourly,daily,alerts&appid={WEATHER_API_KEY}&units=imperial"
+                    uv_data = requests.get(uv_url).json()
+                    uvi = uv_data.get("current", {}).get("uvi", "N/A")
+                    dew_point = uv_data.get("current", {}).get("dew_point", "N/A")
+
+                    extended_text = (
+                        f"Humidity: {humidity}%\n"
+                        f"Cloud Cover: {clouds}%\n"
+                        f"UV Index: {uvi}\n"
+                        f"Dew Point: {dew_point}°F"
+                    )
+                    self.extended_weather_label.config(text=extended_text)
                 else:
                     self.weather_label.config(text="Weather unavailable")
-
+                    self.extended_weather_label.config(text="")
             except Exception:
                 self.weather_label.config(text="Error fetching weather")
+                self.extended_weather_label.config(text="")
 
         threading.Thread(target=fetch, daemon=True).start()
         self.root.after(600000, self.update_weather)
 
-    def update_system_info(self):
-        cpu = psutil.cpu_percent()
-        mem = psutil.virtual_memory().percent
-        disk = psutil.disk_usage('/').percent
-        try:
-            ip = socket.gethostbyname(socket.gethostname())
-        except:
-            ip = "N/A"
-        self.system_label.config(text=f"CPU Usage: {cpu}%\nMemory Usage: {mem}%\nDisk Usage: {disk}%\nLocal IP: {ip}")
-        self.root.after(5000, self.update_system_info)
+    def update_ocean_data(self):
+        def fetch():
+            try:
+                now = datetime.datetime.utcnow().isoformat() + 'Z'
+                headers = {'Authorization': STORMGLASS_API_KEY}
+                url = (
+                    f"https://api.stormglass.io/v2/weather/point?"
+                    f"lat={LAT}&lng={LON}&params=waveHeight,swellHeight,waterTemperature"
+                    f"&source=noaa&start={now}&end={now}"
+                )
+                response = requests.get(url, headers=headers)
+                data = response.json()
+
+                if 'hours' in data and len(data['hours']) > 0:
+                    hour_data = data['hours'][0]
+                    wave = hour_data.get('waveHeight', {}).get('noaa', None)
+                    swell = hour_data.get('swellHeight', {}).get('noaa', None)
+                    water_temp = hour_data.get('waterTemperature', {}).get('noaa', None)
+
+                    ocean_text = (
+                        f"Nahant Beach Conditions:\n"
+                        f"Wave Height: {wave:.1f} m\n"
+                        f"Swell Height: {swell:.1f} m\n"
+                        f"Water Temp: {water_temp:.1f} °C"
+                    )
+                    self.ocean_label.config(text=ocean_text)
+                else:
+                    self.ocean_label.config(text="Ocean data unavailable")
+
+            except Exception as e:
+                self.ocean_label.config(text="Error fetching wave data")
+
+        threading.Thread(target=fetch, daemon=True).start()
+        self.root.after(900000, self.update_ocean_data)  # update every 15 mins
 
 if __name__ == "__main__":
     root = tk.Tk()
