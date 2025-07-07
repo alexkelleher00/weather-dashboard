@@ -141,39 +141,92 @@ class DashboardApp:
         self.root.after(600000, self.update_weather)
 
     def update_ocean_data(self):
+        def deg_to_compass(deg):
+            directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+            return directions[int((deg / 45) + 0.5) % 8]
+
+        def c_to_f(celsius):
+            return (celsius * 9 / 5) + 32
+
         def fetch():
             try:
-                now = datetime.datetime.utcnow().isoformat() + 'Z'
+                now = datetime.datetime.now(datetime.timezone.utc)
+                start = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+                end = (now + datetime.timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
                 headers = {'Authorization': STORMGLASS_API_KEY}
-                url = (
+
+                # Wave/weather data
+                weather_url = (
                     f"https://api.stormglass.io/v2/weather/point?"
-                    f"lat={LAT}&lng={LON}&params=waveHeight,swellHeight,waterTemperature"
-                    f"&source=noaa&start={now}&end={now}"
+                    f"lat={LAT}&lng={LON}&params=waveHeight,swellHeight,waterTemperature,windSpeed,windDirection"
+                    f"&source=noaa&start={start}&end={end}"
                 )
-                response = requests.get(url, headers=headers)
-                data = response.json()
+                print("Fetching weather data...")
+                weather_response = requests.get(weather_url, headers=headers)
+                print("Weather status:", weather_response.status_code)
 
-                if 'hours' in data and len(data['hours']) > 0:
-                    hour_data = data['hours'][0]
-                    wave = hour_data.get('waveHeight', {}).get('noaa', None)
-                    swell = hour_data.get('swellHeight', {}).get('noaa', None)
-                    water_temp = hour_data.get('waterTemperature', {}).get('noaa', None)
+                if weather_response.status_code != 200:
+                    print("Weather response text:", weather_response.text)
+                    raise Exception("Weather API call failed")
 
-                    ocean_text = (
-                        f"Nahant Beach Conditions:\n"
-                        f"Wave Height: {wave:.1f} m\n"
-                        f"Swell Height: {swell:.1f} m\n"
-                        f"Water Temp: {water_temp:.1f} °C"
-                    )
-                    self.ocean_label.config(text=ocean_text)
-                else:
-                    self.ocean_label.config(text="Ocean data unavailable")
+                weather_data = weather_response.json()
+                print("Weather JSON received.")
+
+                wave = swell = water_temp_c = wind_speed = wind_dir = None
+                if "hours" in weather_data and len(weather_data["hours"]) > 0:
+                    hour_data = weather_data["hours"][0]
+                    wave = hour_data.get('waveHeight', {}).get('noaa', 0.0)
+                    swell = hour_data.get('swellHeight', {}).get('noaa', 0.0)
+                    water_temp_c = hour_data.get('waterTemperature', {}).get('noaa', 0.0)
+                    wind_speed = hour_data.get('windSpeed', {}).get('noaa', 0.0)
+                    wind_dir_deg = hour_data.get('windDirection', {}).get('noaa')
+                    wind_dir = deg_to_compass(wind_dir_deg) if wind_dir_deg is not None else "N/A"
+
+                # Tide data
+                tide_url = (
+                    f"https://api.stormglass.io/v2/tide/extremes/point?"
+                    f"lat={LAT}&lng={LON}&start={start}&end={end}"
+                )
+                print("Fetching tide data...")
+                tide_response = requests.get(tide_url, headers=headers)
+                print("Tide status:", tide_response.status_code)
+
+                if tide_response.status_code != 200:
+                    print("Tide response text:", tide_response.text)
+                    raise Exception("Tide API call failed")
+
+                tide_data = tide_response.json()
+                print("Tide JSON received.")
+
+                next_tide_text = "Tide data unavailable"
+                if "data" in tide_data and len(tide_data["data"]) > 0:
+                    tide_event = tide_data["data"][0]
+                    tide_type = tide_event.get("type", "unknown").capitalize()
+                    tide_height = tide_event.get("height", 0.0)
+                    tide_time = datetime.datetime.fromisoformat(tide_event["time"].replace("Z", "+00:00"))
+                    tide_time_str = tide_time.strftime("%I:%M %p")
+                    next_tide_text = f"Next Tide: {tide_type} at {tide_time_str} ({tide_height:.2f} m)"
+
+                water_temp_f = c_to_f(water_temp_c)
+                ocean_text = (
+                    f"Nahant Beach Conditions:\n"
+                    f"Wave Height: {wave:.1f} m\n"
+                    f"Swell Height: {swell:.1f} m\n"
+                    f"Water Temp: {water_temp_f:.1f} °F\n"
+                    f"Wind: {wind_speed:.1f} m/s {wind_dir}\n"
+                    f"{next_tide_text}"
+                )
+
+                self.ocean_label.config(text=ocean_text)
 
             except Exception as e:
-                self.ocean_label.config(text="Error fetching wave data")
+                print("Ocean fetch error:", e)
+                self.ocean_label.config(text="Error fetching ocean data")
 
         threading.Thread(target=fetch, daemon=True).start()
-        self.root.after(900000, self.update_ocean_data)  # update every 15 mins
+        self.root.after(3600000 * 3, self.update_ocean_data)
+
 
 if __name__ == "__main__":
     root = tk.Tk()
