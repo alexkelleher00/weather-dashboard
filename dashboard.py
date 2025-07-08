@@ -25,40 +25,37 @@ class DashboardApp:
         self.root.attributes('-topmost', True)
         self.root.configure(bg="#101820")
 
-        self.font_large = ("Arial", 48, "bold")
-        self.font_medium = ("Arial", 32)
-        self.font_small = ("Arial", 20)
+        self.font_large = ("Arial", 36, "bold")
+        self.font_medium = ("Arial", 22)
+        self.font_small = ("Arial", 14)
+
+        self.last_ocean_fetch_time = None
+        self.ocean_cache = None
 
         self.time_label = tk.Label(root, font=self.font_large, fg="white", bg="#101820")
-        self.time_label.pack(pady=20)
+        self.time_label.pack(pady=10)
 
         self.icon_frame = tk.Frame(root, bg="#101820")
         self.icon_frame.pack()
 
         self.day_night_label = tk.Label(self.icon_frame, bg="#101820")
-        self.day_night_label.pack(side=tk.LEFT, padx=30)
+        self.day_night_label.pack(side=tk.LEFT, padx=20)
 
         self.weather_icon_label = tk.Label(self.icon_frame, bg="#101820")
-        self.weather_icon_label.pack(side=tk.LEFT, padx=30)
+        self.weather_icon_label.pack(side=tk.LEFT, padx=20)
 
         self.weather_label = tk.Label(root, font=self.font_medium, fg="white", bg="#101820")
-        self.weather_label.pack(pady=15)
+        self.weather_label.pack(pady=5)
 
-        self.extended_ocean_frame = tk.Frame(root, bg="#101820")
-        self.extended_ocean_frame.pack(pady=10)
+        # Side-by-side data frame
+        self.data_frame = tk.Frame(root, bg="#101820")
+        self.data_frame.pack()
 
-        self.weather_info_frame = tk.Frame(self.extended_ocean_frame, bg="#101820")
-        self.weather_info_frame.pack(side=tk.LEFT, padx=40)
+        self.extended_weather_label = tk.Label(self.data_frame, font=self.font_small, fg="white", bg="#101820", justify=tk.LEFT)
+        self.extended_weather_label.pack(side=tk.LEFT, padx=20)
 
-        self.ocean_info_frame = tk.Frame(self.extended_ocean_frame, bg="#101820")
-        self.ocean_info_frame.pack(side=tk.LEFT, padx=40)
-
-        self.extended_weather_label = tk.Label(self.weather_info_frame, font=self.font_small, fg="white", bg="#101820", justify=tk.LEFT)
-        self.extended_weather_label.pack()
-
-        self.ocean_label = tk.Label(self.ocean_info_frame, font=self.font_small, fg="white", bg="#101820", justify=tk.LEFT)
-        self.ocean_label.pack()
-
+        self.ocean_label = tk.Label(self.data_frame, font=self.font_small, fg="white", bg="#101820", justify=tk.LEFT)
+        self.ocean_label.pack(side=tk.LEFT, padx=20)
 
         self.system_label = tk.Label(root, font=self.font_small, fg="white", bg="#101820", justify=tk.LEFT)
         self.system_label.pack(pady=10)
@@ -73,6 +70,7 @@ class DashboardApp:
         self.update_time()
         self.update_weather()
         self.update_ocean_data()
+        self.update_system_info()
 
     def update_time(self):
         now = datetime.datetime.now()
@@ -117,7 +115,6 @@ class DashboardApp:
 
                     self.weather_label.config(text=f"{CITY}\n{cond}, {temp:.1f}°F")
 
-                    # Icons
                     dn = Image.open(self.get_day_night_path()).resize((100, 100))
                     self.day_night_img = ImageTk.PhotoImage(dn)
                     self.day_night_label.config(image=self.day_night_img)
@@ -127,7 +124,6 @@ class DashboardApp:
                     self.gif_index = 0
                     self.animate_weather_icon()
 
-                    # UV + Dew Point
                     uv_url = f"https://api.openweathermap.org/data/2.5/onecall?lat={LAT}&lon={LON}&exclude=minutely,hourly,daily,alerts&appid={WEATHER_API_KEY}&units=imperial"
                     uv_data = requests.get(uv_url).json()
                     uvi = uv_data.get("current", {}).get("uvi", "N/A")
@@ -166,76 +162,92 @@ class DashboardApp:
 
                 headers = {'Authorization': STORMGLASS_API_KEY}
 
-                # Wave/weather data
                 weather_url = (
                     f"https://api.stormglass.io/v2/weather/point?"
                     f"lat={LAT}&lng={LON}&params=waveHeight,swellHeight,waterTemperature,windSpeed,windDirection"
                     f"&source=noaa&start={start}&end={end}"
                 )
-                print("Fetching weather data...")
                 weather_response = requests.get(weather_url, headers=headers)
-                print("Weather status:", weather_response.status_code)
-
                 if weather_response.status_code != 200:
-                    print("Weather response text:", weather_response.text)
                     raise Exception("Weather API call failed")
 
                 weather_data = weather_response.json()
-                print("Weather JSON received.")
+                hour_data = weather_data.get("hours", [{}])[0]
 
-                wave = swell = water_temp_c = wind_speed = wind_dir = None
-                if "hours" in weather_data and len(weather_data["hours"]) > 0:
-                    hour_data = weather_data["hours"][0]
-                    wave = hour_data.get('waveHeight', {}).get('noaa', 0.0)
-                    swell = hour_data.get('swellHeight', {}).get('noaa', 0.0)
-                    water_temp_c = hour_data.get('waterTemperature', {}).get('noaa', 0.0)
-                    wind_speed = hour_data.get('windSpeed', {}).get('noaa', 0.0)
-                    wind_dir_deg = hour_data.get('windDirection', {}).get('noaa')
-                    wind_dir = deg_to_compass(wind_dir_deg) if wind_dir_deg is not None else "N/A"
+                wave = hour_data.get('waveHeight', {}).get('noaa', 0.0)
+                swell = hour_data.get('swellHeight', {}).get('noaa', 0.0)
+                water_temp_c = hour_data.get('waterTemperature', {}).get('noaa', 0.0)
+                wind_speed = hour_data.get('windSpeed', {}).get('noaa', 0.0)
+                wind_dir_deg = hour_data.get('windDirection', {}).get('noaa')
+                wind_dir = deg_to_compass(wind_dir_deg) if wind_dir_deg is not None else "N/A"
 
-                # Tide data
                 tide_url = (
                     f"https://api.stormglass.io/v2/tide/extremes/point?"
                     f"lat={LAT}&lng={LON}&start={start}&end={end}"
                 )
-                print("Fetching tide data...")
                 tide_response = requests.get(tide_url, headers=headers)
-                print("Tide status:", tide_response.status_code)
-
                 if tide_response.status_code != 200:
-                    print("Tide response text:", tide_response.text)
                     raise Exception("Tide API call failed")
 
                 tide_data = tide_response.json()
-                print("Tide JSON received.")
-
-                next_tide_text = "Tide data unavailable"
-                if "data" in tide_data and len(tide_data["data"]) > 0:
-                    tide_event = tide_data["data"][0]
-                    tide_type = tide_event.get("type", "unknown").capitalize()
-                    tide_height = tide_event.get("height", 0.0)
-                    tide_time = datetime.datetime.fromisoformat(tide_event["time"].replace("Z", "+00:00"))
-                    tide_time_str = tide_time.strftime("%I:%M %p")
-                    next_tide_text = f"Next Tide: {tide_type} at {tide_time_str} ({tide_height:.2f} m)"
+                tide_event = tide_data.get("data", [{}])[0]
+                tide_type = tide_event.get("type", "unknown").capitalize()
+                tide_height = tide_event.get("height", 0.0)
+                tide_time = datetime.datetime.fromisoformat(tide_event["time"].replace("Z", "+00:00"))
+                tide_time_str = tide_time.strftime("%I:%M %p")
 
                 water_temp_f = c_to_f(water_temp_c)
+                last_updated_str = datetime.datetime.now().strftime("%I:%M %p")
+
                 ocean_text = (
-                    f"Nahant Beach Conditions:\n"
-                    f"Wave Height: {wave:.1f} m\n"
-                    f"Swell Height: {swell:.1f} m\n"
-                    f"Water Temp: {water_temp_f:.1f} °F\n"
+                    f"Nahant Beach:\n"
+                    f"Wave: {wave:.1f} m\n"
+                    f"Swell: {swell:.1f} m\n"
+                    f"Water: {water_temp_f:.1f} °F\n"
                     f"Wind: {wind_speed:.1f} m/s {wind_dir}\n"
-                    f"{next_tide_text}"
+                    f"Tide: {tide_type} at {tide_time_str} ({tide_height:.2f} m)\n"
+                    f"Last Updated: {last_updated_str}"
                 )
 
+                self.ocean_cache = ocean_text
+                self.last_ocean_fetch_time = datetime.datetime.now()
                 self.ocean_label.config(text=ocean_text)
 
             except Exception as e:
                 print("Ocean fetch error:", e)
-                self.ocean_label.config(text="Error fetching ocean data")
+                if self.ocean_cache and self.last_ocean_fetch_time:
+                    age = datetime.datetime.now() - self.last_ocean_fetch_time
+                    if age < datetime.timedelta(hours=3):
+                        self.ocean_label.config(text=self.ocean_cache)
+                    else:
+                        self.ocean_label.config(text="Ocean data unavailable")
+                else:
+                    self.ocean_label.config(text="Ocean data unavailable")
 
         threading.Thread(target=fetch, daemon=True).start()
         self.root.after(3600000 * 3, self.update_ocean_data)
+
+    def update_system_info(self):
+        def fetch_system_info():
+            try:
+                cpu = psutil.cpu_percent()
+                mem = psutil.virtual_memory().percent
+                disk = psutil.disk_usage('/').percent
+                ip = socket.gethostbyname(socket.gethostname())
+
+                info = (
+                    f"CPU: {cpu}%\n"
+                    f"Memory: {mem}%\n"
+                    f"Disk: {disk}%\n"
+                    f"IP: {ip}"
+                )
+            except Exception:
+                info = "System info error"
+
+            self.system_label.config(text=info)
+
+        fetch_system_info()
+        self.root.after(5000, self.update_system_info)
 
 
 if __name__ == "__main__":
