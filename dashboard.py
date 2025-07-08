@@ -43,9 +43,6 @@ class DashboardApp:
         self.icon_frame = tk.Frame(root, bg="#101820")
         self.icon_frame.pack()
 
-        self.day_night_label = tk.Label(self.icon_frame, bg="#101820")
-        self.day_night_label.pack(side=tk.LEFT, padx=20)
-
         self.weather_icon_label = tk.Label(self.icon_frame, bg="#101820")
         self.weather_icon_label.pack(side=tk.LEFT, padx=20)
 
@@ -67,7 +64,6 @@ class DashboardApp:
         self.status_label = tk.Label(root, font=self.font_small, fg="gray", bg="#101820")
         self.status_label.pack(side=tk.BOTTOM, pady=10)
 
-        self.day_night_img = None
         self.gif_frames = []
         self.gif_index = 0
 
@@ -89,10 +85,6 @@ class DashboardApp:
         now = datetime.datetime.now()
         self.time_label.config(text=now.strftime("%A, %B %d %Y\n%I:%M:%S %p"))
         self.root.after(1000, self.update_time)
-
-    def get_day_night_path(self):
-        hour = datetime.datetime.now().hour
-        return os.path.join(ICON_DIR, "sun.png" if 6 <= hour < 18 else "moon.png")
 
     def get_weather_gif_path(self, condition):
         cond = condition.lower()
@@ -127,10 +119,6 @@ class DashboardApp:
                     clouds = data["clouds"]["all"]
 
                     self.weather_label.config(text=f"{CITY}\n{cond}, {temp:.1f}°F")
-
-                    dn = Image.open(self.get_day_night_path()).resize((100, 100))
-                    self.day_night_img = ImageTk.PhotoImage(dn)
-                    self.day_night_label.config(image=self.day_night_img)
 
                     gif = Image.open(self.get_weather_gif_path(cond))
                     self.gif_frames = [ImageTk.PhotoImage(frame.resize((100, 100))) for frame in ImageSequence.Iterator(gif)]
