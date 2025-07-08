@@ -2,16 +2,16 @@ import tkinter as tk
 from PIL import Image, ImageTk, ImageSequence
 import requests
 import threading
-import psutil
-import socket
 import datetime
 import os
+import socket
+import psutil  # still needed for IP unless removed completely
 
 # === CONFIG ===
 WEATHER_API_KEY = "7c5e741ce46b209653866485f0ab8ba7"
 STORMGLASS_API_KEY = "8bfbc2a0-5ad7-11f0-bed1-0242ac130006-8bfbc304-5ad7-11f0-bed1-0242ac130006"
 CITY = "Boston"
-LAT = 42.4194      # Nahant Beach
+LAT = 42.4194  # Nahant Beach
 LON = -70.9170
 
 ICON_DIR = "icons"
@@ -47,7 +47,6 @@ class DashboardApp:
         self.weather_label = tk.Label(root, font=self.font_medium, fg="white", bg="#101820")
         self.weather_label.pack(pady=5)
 
-        # Side-by-side data frame
         self.data_frame = tk.Frame(root, bg="#101820")
         self.data_frame.pack()
 
@@ -56,9 +55,6 @@ class DashboardApp:
 
         self.ocean_label = tk.Label(self.data_frame, font=self.font_small, fg="white", bg="#101820", justify=tk.LEFT)
         self.ocean_label.pack(side=tk.LEFT, padx=20)
-
-        self.system_label = tk.Label(root, font=self.font_small, fg="white", bg="#101820", justify=tk.LEFT)
-        self.system_label.pack(pady=10)
 
         self.status_label = tk.Label(root, font=self.font_small, fg="gray", bg="#101820")
         self.status_label.pack(side=tk.BOTTOM, pady=10)
@@ -70,7 +66,6 @@ class DashboardApp:
         self.update_time()
         self.update_weather()
         self.update_ocean_data()
-        self.update_system_info()
 
     def update_time(self):
         now = datetime.datetime.now()
@@ -226,28 +221,6 @@ class DashboardApp:
 
         threading.Thread(target=fetch, daemon=True).start()
         self.root.after(3600000 * 3, self.update_ocean_data)
-
-    def update_system_info(self):
-        def fetch_system_info():
-            try:
-                cpu = psutil.cpu_percent()
-                mem = psutil.virtual_memory().percent
-                disk = psutil.disk_usage('/').percent
-                ip = socket.gethostbyname(socket.gethostname())
-
-                info = (
-                    f"CPU: {cpu}%\n"
-                    f"Memory: {mem}%\n"
-                    f"Disk: {disk}%\n"
-                    f"IP: {ip}"
-                )
-            except Exception:
-                info = "System info error"
-
-            self.system_label.config(text=info)
-
-        fetch_system_info()
-        self.root.after(5000, self.update_system_info)
 
 
 if __name__ == "__main__":
