@@ -4,8 +4,6 @@ import requests
 import threading
 import datetime
 import os
-import socket
-import psutil  # still needed for IP unless removed completely
 
 # === CONFIG ===
 WEATHER_API_KEY = "7c5e741ce46b209653866485f0ab8ba7"
@@ -32,6 +30,13 @@ class DashboardApp:
         self.last_ocean_fetch_time = None
         self.ocean_cache = None
 
+        # === BACKGROUND IMAGE ===
+        self.bg_label = tk.Label(root)
+        self.bg_label.place(x=0, y=0, relwidth=1, relheight=1)
+        self.update_background()
+        self.root.after(3600000, self.update_background)  # update hourly
+
+        # === MAIN UI ===
         self.time_label = tk.Label(root, font=self.font_large, fg="white", bg="#101820")
         self.time_label.pack(pady=10)
 
@@ -66,6 +71,16 @@ class DashboardApp:
         self.update_time()
         self.update_weather()
         self.update_ocean_data()
+
+    def update_background(self):
+        hour = datetime.datetime.now().hour
+        img_path = "boston_day.jpg" if 6 <= hour < 18 else "boston_night.jpg"
+        try:
+            image = Image.open(img_path).resize((self.root.winfo_screenwidth(), self.root.winfo_screenheight()))
+            self.bg_img = ImageTk.PhotoImage(image)
+            self.bg_label.config(image=self.bg_img)
+        except Exception as e:
+            print(f"Error loading background image: {e}")
 
     def update_time(self):
         now = datetime.datetime.now()
