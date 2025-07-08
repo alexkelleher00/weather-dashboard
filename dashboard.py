@@ -25,18 +25,18 @@ class DashboardApp:
 
         self.font_large = ("Arial", 36, "bold")
         self.font_medium = ("Arial", 22)
-        self.font_small = ("Arial", 14)
+        # Increased font size for extended data labels
+        self.font_small = ("Arial", 18)
 
         self.last_ocean_fetch_time = None
         self.ocean_cache = None
 
-        # === BACKGROUND IMAGE ===
+        # Background Image
         self.bg_label = tk.Label(root)
         self.bg_label.place(x=0, y=0, relwidth=1, relheight=1)
         self.update_background()
         self.root.after(3600000, self.update_background)  # update hourly
 
-        # === MAIN UI ===
         self.time_label = tk.Label(root, font=self.font_large, fg="white", bg="#101820")
         self.time_label.pack(pady=10)
 
@@ -52,14 +52,17 @@ class DashboardApp:
         self.weather_label = tk.Label(root, font=self.font_medium, fg="white", bg="#101820")
         self.weather_label.pack(pady=5)
 
+        # Frame for extended weather and ocean data, shifted slightly right (padx=80)
         self.data_frame = tk.Frame(root, bg="#101820")
-        self.data_frame.pack()
+        self.data_frame.pack(padx=80)
 
-        self.extended_weather_label = tk.Label(self.data_frame, font=self.font_small, fg="white", bg="#101820", justify=tk.LEFT)
-        self.extended_weather_label.pack(side=tk.LEFT, padx=20)
+        self.extended_weather_label = tk.Label(
+            self.data_frame, font=self.font_small, fg="white", bg="#101820", justify=tk.LEFT)
+        self.extended_weather_label.pack(side=tk.LEFT, padx=30)
 
-        self.ocean_label = tk.Label(self.data_frame, font=self.font_small, fg="white", bg="#101820", justify=tk.LEFT)
-        self.ocean_label.pack(side=tk.LEFT, padx=20)
+        self.ocean_label = tk.Label(
+            self.data_frame, font=self.font_small, fg="white", bg="#101820", justify=tk.LEFT)
+        self.ocean_label.pack(side=tk.LEFT, padx=30)
 
         self.status_label = tk.Label(root, font=self.font_small, fg="gray", bg="#101820")
         self.status_label.pack(side=tk.BOTTOM, pady=10)
@@ -74,7 +77,7 @@ class DashboardApp:
 
     def update_background(self):
         hour = datetime.datetime.now().hour
-        img_path = "boston_day.jpg" if 6 <= hour < 18 else "boston_night.jpg"
+        img_path = "icons/boston_day.png" if 6 <= hour < 18 else "icons/boston_night.png"
         try:
             image = Image.open(img_path).resize((self.root.winfo_screenwidth(), self.root.winfo_screenheight()))
             self.bg_img = ImageTk.PhotoImage(image)
