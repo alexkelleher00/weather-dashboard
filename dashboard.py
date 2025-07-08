@@ -44,11 +44,21 @@ class DashboardApp:
         self.weather_label = tk.Label(root, font=self.font_medium, fg="white", bg="#101820")
         self.weather_label.pack(pady=15)
 
-        self.extended_weather_label = tk.Label(root, font=self.font_small, fg="white", bg="#101820", justify=tk.LEFT)
-        self.extended_weather_label.pack(pady=5)
+        self.extended_ocean_frame = tk.Frame(root, bg="#101820")
+        self.extended_ocean_frame.pack(pady=10)
 
-        self.ocean_label = tk.Label(root, font=self.font_small, fg="white", bg="#101820", justify=tk.LEFT)
-        self.ocean_label.pack(pady=10)
+        self.weather_info_frame = tk.Frame(self.extended_ocean_frame, bg="#101820")
+        self.weather_info_frame.pack(side=tk.LEFT, padx=40)
+
+        self.ocean_info_frame = tk.Frame(self.extended_ocean_frame, bg="#101820")
+        self.ocean_info_frame.pack(side=tk.LEFT, padx=40)
+
+        self.extended_weather_label = tk.Label(self.weather_info_frame, font=self.font_small, fg="white", bg="#101820", justify=tk.LEFT)
+        self.extended_weather_label.pack()
+
+        self.ocean_label = tk.Label(self.ocean_info_frame, font=self.font_small, fg="white", bg="#101820", justify=tk.LEFT)
+        self.ocean_label.pack()
+
 
         self.system_label = tk.Label(root, font=self.font_small, fg="white", bg="#101820", justify=tk.LEFT)
         self.system_label.pack(pady=10)
