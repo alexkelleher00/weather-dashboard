@@ -8,9 +8,9 @@ import os
 # === CONFIG ===
 WEATHER_API_KEY = "7c5e741ce46b209653866485f0ab8ba7"
 STORMGLASS_API_KEY = "8bfbc2a0-5ad7-11f0-bed1-0242ac130006-8bfbc304-5ad7-11f0-bed1-0242ac130006"
-CITY = "Boston"
-LAT = 42.4194  # Nahant Beach
-LON = -70.9170
+CITY = "Somerville"
+LAT = 42.44782  # Nahant Beach
+LON = -70.93672
 
 ICON_DIR = "icons"
 GIF_DIR = "gifs"
