@@ -9,8 +9,8 @@ import os
 WEATHER_API_KEY = "7c5e741ce46b209653866485f0ab8ba7"
 STORMGLASS_API_KEY = "8bfbc2a0-5ad7-11f0-bed1-0242ac130006-8bfbc304-5ad7-11f0-bed1-0242ac130006"
 CITY = "Somerville"
-LAT = 42.44782  # Nahant Beach
-LON = -70.93672
+LAT = 42.4194
+LON = -70.9170
 
 ICON_DIR = "icons"
 GIF_DIR = "gifs"
@@ -35,7 +35,7 @@ class DashboardApp:
         self.bg_label = tk.Label(root)
         self.bg_label.place(x=0, y=0, relwidth=1, relheight=1)
         self.update_background()
-        self.root.after(3600000, self.update_background)  # update hourly
+        self.root.after(60000, self.update_background)  # update hourly
 
         self.time_label = tk.Label(root, font=self.font_large, fg="white", bg="#101820")
         self.time_label.pack(pady=10)
@@ -74,12 +74,20 @@ class DashboardApp:
     def update_background(self):
         hour = datetime.datetime.now().hour
         img_path = "icons/boston_day.png" if 6 <= hour < 18 else "icons/boston_night.png"
-        try:
-            image = Image.open(img_path).resize((self.root.winfo_screenwidth(), self.root.winfo_screenheight()))
-            self.bg_img = ImageTk.PhotoImage(image)
-            self.bg_label.config(image=self.bg_img)
-        except Exception as e:
-            print(f"Error loading background image: {e}")
+
+        # Only reload if the image path changes
+        if getattr(self, "current_bg_path", None) != img_path:
+            try:
+                image = Image.open(img_path).resize((self.root.winfo_screenwidth(), self.root.winfo_screenheight()))
+                self.bg_img = ImageTk.PhotoImage(image)
+                self.bg_label.config(image=self.bg_img)
+                self.current_bg_path = img_path
+                print(f"Background image changed to {img_path}")
+            except Exception as e:
+                print(f"Error loading background image: {e}")
+
+        # Schedule to check again in 1 minute
+        self.root.after(60000, self.update_background)
 
     def update_time(self):
         now = datetime.datetime.now()
