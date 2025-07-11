@@ -181,7 +181,12 @@ class DashboardApp:
                     raise Exception("Weather API call failed")
 
                 weather_data = weather_response.json()
-                hour_data = weather_data.get("hours", [{}])[0]
+                hours = weather_data.get("hours", [])
+
+                if not hours:
+                    raise Exception("No hourly data returned from Stormglass")
+
+                hour_data = hours[0]
 
                 wave = hour_data.get('waveHeight', {}).get('noaa', 0.0)
                 swell = hour_data.get('swellHeight', {}).get('noaa', 0.0)
