@@ -6,7 +6,7 @@ class ScoreboardApp:
         self.root = root
         self.back_callback = back_callback
         self.root.title("Scoreboard")
-
+        self.root.attributes('-fullscreen', True)
         # Default configurations
         self.team_names = ["Team 1", "Team 2"]
         self.scores = [0, 0]
@@ -21,13 +21,12 @@ class ScoreboardApp:
             back_button = tk.Button(self.root, text="Back to Dashboard", command=self.back_callback)
             back_button.pack(pady=10)
 
-
         # Title Label
-        title_label = tk.Label(self.root, text="Punks Scoreboard", font=("Arial", 14))
+        title_label = tk.Label(self.root, text="Punks Scoreboard", font=("Arial", 24))
         title_label.pack(pady=20)
 
         # Point total options
-        point_label = tk.Label(self.root, text="Select Game Finish Points:")
+        point_label = tk.Label(self.root, text="Select Game Finish Points:", font=("Arial", 14))
         point_label.pack()
 
         point_button_frame = tk.Frame(self.root)
@@ -67,7 +66,7 @@ class ScoreboardApp:
 
         # Button to start the game
         start_button = tk.Button(self.root, text="Start Game", command=self.start_game)
-        start_button.pack(pady=20)
+        start_button.pack(pady=25)
 
     def set_game_finish_score(self, score):
         """Sets the game finish score based on user selection"""
@@ -86,38 +85,41 @@ class ScoreboardApp:
         """Creates the game screen with scores and buttons to control the game"""
         self.clear_screen()
 
-        # Display team names, scores, and total game score
         score_frame = tk.Frame(self.root)
-        score_frame.pack(pady=20)
+        score_frame.pack(pady=25)
 
         self.score_labels = []
-        for i, team_name in enumerate(self.team_names):
-            team_label = tk.Label(score_frame, text=team_name, font=("Arial", 12))
-            team_label.grid(row=i, column=0, padx=10)
+        team_colors = ["red", "blue", "green", "purple", "orange", "darkgreen"]
 
-            score_label = tk.Label(score_frame, text=str(self.scores[i]), font=("Arial", 12))
-            score_label.grid(row=i, column=1, padx=10)
+        for i, team_name in enumerate(self.team_names):
+            team_color = team_colors[i % len(team_colors)]
+
+            team_label = tk.Label(score_frame, text=team_name, font=("Arial", 28, "bold"), fg=team_color)
+            team_label.grid(row=i, column=0, padx=20)
+
+            score_label = tk.Label(score_frame, text=str(self.scores[i]), font=("Arial", 28), fg=team_color)
+            score_label.grid(row=i, column=1, padx=20)
             self.score_labels.append(score_label)
 
-            # Buttons to modify scores
-            increase_button = tk.Button(score_frame, text="+1", command=lambda i=i: self.change_score(i, 1))
-            increase_button.grid(row=i, column=2, padx=5)
+            # Large buttons
+            increase_button = tk.Button(score_frame, text="+1", font=("Arial", 24), bg=team_color,
+                                        command=lambda i=i: self.change_score(i, 1), width=10, height=2)
+            increase_button.grid(row=i, column=2, padx=10)
 
-            decrease_button = tk.Button(score_frame, text="-1", command=lambda i=i: self.change_score(i, -1))
-            decrease_button.grid(row=i, column=3, padx=5)
+            decrease_button = tk.Button(score_frame, text="-1", font=("Arial", 24), bg=team_color,
+                                        command=lambda i=i: self.change_score(i, -1), width=10, height=2)
+            decrease_button.grid(row=i, column=3, padx=10)
 
-        # Display the total game score
-        total_game_score_label = tk.Label(self.root, text=f"Total Game Finish Score: {self.game_finish_score}", font=("Arial", 12))
+        total_game_score_label = tk.Label(self.root, text=f"Play To: {self.game_finish_score} Points", font=("Arial", 18))
         total_game_score_label.pack(pady=10)
 
-        # Buttons for reset and returning to the home menu
         button_frame = tk.Frame(self.root)
-        button_frame.pack(pady=20)
+        button_frame.pack(pady=10)
 
-        reset_button = tk.Button(button_frame, text="Reset Game", command=self.reset_game)
+        reset_button = tk.Button(button_frame, text="Reset Game", font=("Arial", 14), width=15, command=self.reset_game)
         reset_button.pack(side=tk.LEFT, padx=20)
 
-        home_button = tk.Button(button_frame, text="Back to Home", command=self.home_screen)
+        home_button = tk.Button(button_frame, text="Back to Home", font=("Arial", 14), width=15, command=self.home_screen)
         home_button.pack(side=tk.LEFT, padx=20)
 
     def change_score(self, team_index, change):
@@ -159,22 +161,26 @@ class ScoreboardApp:
         remove_button.grid(row=row_num, column=1, padx=10)
 
     def remove_team(self, team_index):
-        """Removes a team from the team names and updates the UI"""
-        if len(self.team_names) > 2:  # Ensuring there are at least two teams
+        """Removes a team and refreshes the team entry UI"""
+        if len(self.team_names) > 2:
             self.team_names.pop(team_index)
             self.scores.pop(team_index)
-
-            # Remove the corresponding team entry and remove button
-            self.team_name_entries[team_index].destroy()
             self.team_name_entries.pop(team_index)
-            self.team_frame.grid_slaves(row=team_index, column=0)[0].destroy()  # Remove the remove button
 
-            # Re-arrange the remaining teams in the UI
-            for i, entry in enumerate(self.team_name_entries):
+            # Clear the team frame
+            for widget in self.team_frame.winfo_children():
+                widget.destroy()
+
+            # Recreate the team entry fields and remove buttons
+            self.team_name_entries = []
+            for i, name in enumerate(self.team_names):
+                entry = tk.Entry(self.team_frame)
+                entry.insert(tk.END, name)
                 entry.grid(row=i, column=0, pady=5, padx=10)
+                self.team_name_entries.append(entry)
 
-            for i, button in enumerate(self.team_frame.grid_slaves(row=team_index, column=1)):
-                button.grid(row=i, column=1)
+                remove_button = tk.Button(self.team_frame, text="Remove", command=lambda i=i: self.remove_team(i))
+                remove_button.grid(row=i, column=1, padx=10)
 
     def clear_screen(self):
         """Clears the current screen widgets"""
