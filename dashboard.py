@@ -6,6 +6,7 @@ import datetime
 import os
 
 from scoreboard import ScoreboardApp
+from dashtunes import SpotifyTouchTunes
 
 # === CONFIG ===
 WEATHER_API_KEY = "7c5e741ce46b209653866485f0ab8ba7"
@@ -85,6 +86,10 @@ class DashboardApp:
             self.nav_frame, text="Scoreboard", font=self.font_small, command=self.goto_scoreboard
         )
         self.scoreboard_button.pack(side=tk.LEFT, padx=10)
+        
+        self.music_button = tk.Button(self.nav_frame, text="Music", font=self.font_small, command=self.goto_music)
+        self.music_button.pack(side=tk.LEFT, padx=10)
+
         
 
 
@@ -279,6 +284,10 @@ class DashboardApp:
     def goto_scoreboard(self):
         self.clear_screen()
         ScoreboardApp(self.root, back_callback=self.reload_dashboard)
+
+    def goto_music(self):
+        self.clear_screen()
+        SpotifyTouchTunes(self.root, back_callback=self.reload_dashboard)
     
     def reload_dashboard(self):
         self.clear_screen()
