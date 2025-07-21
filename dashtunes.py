@@ -64,7 +64,8 @@ class SpotifyTouchTunes:
             client_id=SPOTIFY_CLIENT_ID,
             client_secret=SPOTIFY_CLIENT_SECRET,
             redirect_uri=SPOTIFY_REDIRECT_URI,
-            scope="user-read-playback-state user-modify-playback-state"
+            scope="user-read-playback-state user-modify-playback-state",
+            cache_path=".spotify_cache"
         ))
 
     def start_playback(self):
