@@ -12,7 +12,7 @@ import time
 BLUETOOTH_DEVICE_NAME = "DJ Kells"
 SPOTIFY_CLIENT_ID = "e2b66ba1e9f4437183f74f37fe9bfbee"
 SPOTIFY_CLIENT_SECRET = "591a0dd14de549ef90b505adfb6e1388t"
-SPOTIFY_REDIRECT_URI = "https://127.0.0.1:8888/callback"
+SPOTIFY_REDIRECT_URI = "http://127.0.0.1:8888/callback"
 SPOTIFY_PLAYLIST_URI = "spotify:playlist:2lsjZmZSeeSERMKq8ARG6h?si=f87c0c9137f049cb"  # Replace with your playlist
 
 class SpotifyTouchTunes:
