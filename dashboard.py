@@ -5,6 +5,8 @@ import threading
 import datetime
 import os
 
+from scoreboard import ScoreboardApp
+
 # === CONFIG ===
 WEATHER_API_KEY = "7c5e741ce46b209653866485f0ab8ba7"
 STORMGLASS_API_KEY = "8bfbc2a0-5ad7-11f0-bed1-0242ac130006-8bfbc304-5ad7-11f0-bed1-0242ac130006"
@@ -22,51 +24,73 @@ class DashboardApp:
         self.root.attributes('-fullscreen', True)
         self.root.attributes('-topmost', True)
         self.root.configure(bg="#101820")
-
-        self.font_large = ("Arial", 36, "bold")
-        self.font_medium = ("Arial", 22)
-        # Increased font size for extended data labels
-        self.font_small = ("Arial", 18)
-
         self.last_ocean_fetch_time = None
         self.ocean_cache = None
 
-        # Background Image
-        self.bg_label = tk.Label(root)
+        self.setup_layout()
+        self.update_time()
+        self.update_weather()
+        self.update_ocean_data()
+
+    def setup_layout(self):
+        self.font_large = ("Arial", 36, "bold")
+        self.font_medium = ("Arial", 22)
+        self.font_small = ("Arial", 18)
+        self.bg_img = None
+        self.gif_frames = []
+        self.gif_index = 0
+        
+    
+        # Background
+        self.bg_label = tk.Label(self.root)
         self.bg_label.place(x=0, y=0, relwidth=1, relheight=1)
         self.update_background()
-        self.root.after(60000, self.update_background)  # update hourly
-
-        self.time_label = tk.Label(root, font=self.font_large, fg="white", bg="#101820")
+        self.root.after(60000, self.update_background)
+    
+        # Time
+        self.time_label = tk.Label(self.root, font=self.font_large, fg="white", bg="#101820")
         self.time_label.pack(pady=10)
-
-        self.icon_frame = tk.Frame(root, bg="#101820")
+    
+        # Weather icon + label
+        self.icon_frame = tk.Frame(self.root, bg="#101820")
         self.icon_frame.pack()
-
+    
         self.weather_icon_label = tk.Label(self.icon_frame, bg="#101820")
         self.weather_icon_label.pack(side=tk.LEFT, padx=20)
-
-        self.weather_label = tk.Label(root, font=self.font_medium, fg="white", bg="#101820")
+    
+        self.weather_label = tk.Label(self.root, font=self.font_medium, fg="white", bg="#101820")
         self.weather_label.pack(pady=5)
-
-        # Frame for extended weather and ocean data, shifted slightly right (padx=80)
-        self.data_frame = tk.Frame(root, bg="#101820")
+    
+        # Extended data frame
+        self.data_frame = tk.Frame(self.root, bg="#101820")
         self.data_frame.pack(padx=80)
-
+    
         self.extended_weather_label = tk.Label(
             self.data_frame, font=self.font_small, fg="white", bg="#101820", justify=tk.LEFT)
         self.extended_weather_label.pack(side=tk.LEFT, padx=30)
-
+    
         self.ocean_label = tk.Label(
             self.data_frame, font=self.font_small, fg="white", bg="#101820", justify=tk.LEFT)
         self.ocean_label.pack(side=tk.LEFT, padx=30)
-
-        self.status_label = tk.Label(root, font=self.font_small, fg="gray", bg="#101820")
+    
+        # Status label at bottom
+        self.status_label = tk.Label(self.root, font=self.font_small, fg="gray", bg="#101820")
         self.status_label.pack(side=tk.BOTTOM, pady=10)
+    
+        # Navigation buttons
+        self.nav_frame = tk.Frame(self.root, bg="#101820")
+        self.nav_frame.pack(side=tk.BOTTOM, pady=10)
+    
+        self.scoreboard_button = tk.Button(
+            self.nav_frame, text="Scoreboard", font=self.font_small, command=self.goto_scoreboard
+        )
+        self.scoreboard_button.pack(side=tk.LEFT, padx=10)
+        
 
-        self.gif_frames = []
-        self.gif_index = 0
 
+    def reload_dashboard(self):
+        self.clear_screen()
+        self.setup_layout()
         self.update_time()
         self.update_weather()
         self.update_ocean_data()
@@ -166,6 +190,10 @@ class DashboardApp:
         def fetch():
             try:
                 now = datetime.datetime.now(datetime.timezone.utc)
+                if self.ocean_cache and self.last_ocean_fetch_time:
+                    if now - self.last_ocean_fetch_time < datetime.timedelta(hours=3):
+                        self.ocean_label.config(text=self.ocean_cache)
+                        return  # Skip re-fetching
                 start = now.strftime("%Y-%m-%dT%H:%M:%SZ")
                 end = (now + datetime.timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -204,11 +232,18 @@ class DashboardApp:
                     raise Exception("Tide API call failed")
 
                 tide_data = tide_response.json()
-                tide_event = tide_data.get("data", [{}])[0]
-                tide_type = tide_event.get("type", "unknown").capitalize()
-                tide_height = tide_event.get("height", 0.0)
-                tide_time = datetime.datetime.fromisoformat(tide_event["time"].replace("Z", "+00:00"))
-                tide_time_str = tide_time.strftime("%I:%M %p")
+                tide_events = tide_data.get("data", [])
+                tide_text = "Tide: No data available"
+
+                if tide_events:
+                    tide_event = tide_events[0]
+                    tide_type = tide_event.get("type", "unknown").capitalize()
+                    tide_height = tide_event.get("height", 0.0)
+                    tide_time = datetime.datetime.fromisoformat(tide_event["time"].replace("Z", "+00:00"))
+                    tide_time_str = tide_time.strftime("%I:%M %p")
+                    tide_text = f"Tide: {tide_type} at {tide_time_str} ({tide_height:.2f} m)"
+                    
+
 
                 water_temp_f = c_to_f(water_temp_c)
                 last_updated_str = datetime.datetime.now().strftime("%I:%M %p")
@@ -219,7 +254,7 @@ class DashboardApp:
                     f"Swell: {swell:.1f} m\n"
                     f"Water: {water_temp_f:.1f} °F\n"
                     f"Wind: {wind_speed:.1f} m/s {wind_dir}\n"
-                    f"Tide: {tide_type} at {tide_time_str} ({tide_height:.2f} m)\n"
+                    f"Tide: {tide_text}\n"
                     f"Last Updated: {last_updated_str}"
                 )
 
@@ -240,6 +275,21 @@ class DashboardApp:
 
         threading.Thread(target=fetch, daemon=True).start()
         self.root.after(3600000 * 3, self.update_ocean_data)
+    
+    def goto_scoreboard(self):
+        self.clear_screen()
+        ScoreboardApp(self.root, back_callback=self.reload_dashboard)
+    
+    def reload_dashboard(self):
+        self.clear_screen()
+        self.__init__(self.root)  # Restart the dashboard cleanly
+
+    def clear_screen(self):
+        for widget in self.root.winfo_children():
+            widget.destroy()
+        self.current_bg_path = None  # Force reload of background image
+
+
 
 
 if __name__ == "__main__":
