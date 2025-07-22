@@ -43,9 +43,6 @@ class SpotifyTouchTunes:
         self.controls = tk.Frame(self.root, bg="#101820")
         self.controls.pack(pady=20)
 
-        self.play_button = tk.Button(self.controls, text="Pause", command=self.toggle_playback)
-        self.play_button.pack(side=tk.LEFT, padx=10)
-
         self.back_button = tk.Button(self.controls, text="Back", command=self.back_callback)
         self.back_button.pack(side=tk.LEFT, padx=10)
 
@@ -135,7 +132,7 @@ class SpotifyTouchTunes:
             self.update_playback()
         except Exception as e:
             print("Skip Next Error:", e)
-    
+
     def skip_previous(self):
         try:
             self.sp.previous_track()
