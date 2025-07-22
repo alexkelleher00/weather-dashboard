@@ -49,6 +49,19 @@ class SpotifyTouchTunes:
         self.back_button = tk.Button(self.controls, text="Back", command=self.back_callback)
         self.back_button.pack(side=tk.LEFT, padx=10)
 
+        # Skip Previous Button
+        self.skip_prev_button = tk.Button(self.frame, text="⏮️ Prev", font=("Arial", 20), command=self.skip_previous)
+        self.skip_prev_button.grid(row=3, column=0, padx=10, pady=10)
+
+        # Play/Pause Button (already exists)
+        self.play_pause_button = tk.Button(self.frame, text="▶️", font=("Arial", 20), command=self.toggle_playback)
+        self.play_pause_button.grid(row=3, column=1, padx=10, pady=10)
+
+        # Skip Next Button
+        self.skip_next_button = tk.Button(self.frame, text="⏭️ Next", font=("Arial", 20), command=self.skip_next)
+        self.skip_next_button.grid(row=3, column=2, padx=10, pady=10)
+
+
     def connect_bluetooth(self):
         def run():
             print("Connecting to Bluetooth speaker...")
@@ -114,3 +127,19 @@ class SpotifyTouchTunes:
                 time.sleep(5)
 
         threading.Thread(target=run, daemon=True).start()
+
+
+    def skip_next(self):
+        try:
+            self.sp.next_track()
+            self.update_playback()
+        except Exception as e:
+            print("Skip Next Error:", e)
+    
+    def skip_previous(self):
+        try:
+            self.sp.previous_track()
+            self.update_playback()
+        except Exception as e:
+            print("Skip Previous Error:", e)
+
