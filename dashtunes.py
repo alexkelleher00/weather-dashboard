@@ -13,6 +13,7 @@ BLUETOOTH_DEVICE_NAME = "DJ Kells"
 SPOTIFY_CLIENT_ID = "e2b66ba1e9f4437183f74f37fe9bfbee"
 SPOTIFY_CLIENT_SECRET = "591a0dd14de549ef90b505adfb6e1388"
 SPOTIFY_REDIRECT_URI = "http://127.0.0.1:8888/callback"
+SPOTIFY_PLAYLIST_URI = "spotify:playlist:2lsjZmZSeeSERMKq8ARG6h"
 SPOTIFY_DJX_URI = "spotify:track:6wOmmoM5nyS6mOyzo9wDjC?si=95e2c80b09b649b4"  # Replace with actual DJ X URI
 
 class SpotifyTouchTunes:
@@ -59,12 +60,6 @@ class SpotifyTouchTunes:
 
         self.back_button = tk.Button(self.controls, text="Back", command=self.back_callback)
         self.back_button.grid(row=3, column=4, padx=10, pady=10)
-
-        self.device_frame = tk.Frame(self.root, bg="#101820")
-        self.device_frame.pack(pady=10)
-
-        self.playlist_frame = tk.Frame(self.root, bg="#101820")
-        self.playlist_frame.pack(side=tk.RIGHT, padx=20)
 
     def init_spotify(self):
         self.sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
@@ -147,16 +142,16 @@ class SpotifyTouchTunes:
                 print("No devices found.")
                 return
 
-            tk.Label(self.device_frame, text="Available Devices:", font=("Arial", 14), fg="white", bg="#101820").pack()
+            tk.Label(self.controls, text="Available Devices:", font=("Arial", 14), fg="white", bg="#101820").grid(row=4,column=4, padx=10, pady=10)
 
-            for device in devices:
+            for i, device in enumerate(devices):
                 btn = tk.Button(
-                    self.device_frame,
+                    self.controls,
                     text=device['name'],
                     command=lambda d_id=device['id']: self.transfer_to_device(d_id),
                     bg="#1DB954", fg="white", font=("Arial", 12)
                 )
-                btn.pack(pady=4)
+                btn.grid(row=4,column=5+i, padx=10, pady=10)
         except Exception as e:
             print("Device fetch error:", e)
 
@@ -170,18 +165,19 @@ class SpotifyTouchTunes:
     def load_playlists(self):
         try:
             playlists = self.sp.current_user_playlists(limit=20)['items']
+            tk.Label(self.controls, text="Playlists: ", font=("Arial", 14), fg="white", bg="#101820").grid(row=4,column=0, padx=10, pady=10)
 
             liked_button = tk.Button(self.controls, text="❤️ Liked Songs", command=self.play_liked_songs, bg="#535353", fg="white")
-            liked_button.grid(row=4, column=0, padx=10, pady=10)
+            liked_button.grid(row=4, column=1, padx=10, pady=10)
 
-            djx_button = tk.Button(self.controls, text="🎧 DJ X Playlist", command=lambda: self.play_playlist(SPOTIFY_DJX_URI), bg="#1DB954", fg="white")
-            djx_button.grid(row=4, column=1, padx=10, pady=10)
+            djx_button = tk.Button(self.controls, text="🎧 Mumford Mansfield", command=lambda: self.play_playlist(SPOTIFY_PLAYLIST_URI), bg="#1DB954", fg="white")
+            djx_button.grid(row=4, column=2, padx=10, pady=10)
             for playlist in playlists:
                 name = playlist['name']
                 if name == "Español dos":
                     uri = playlist['uri']
                     btn = tk.Button(self.controls, text=name, command=lambda u=uri: self.play_playlist(u), bg="#333", fg="white")
-                    btn.grid(row=4, column=2, padx=10, pady=10)
+                    btn.grid(row=4, column=3, padx=10, pady=10)
         except Exception as e:
             print("Load Playlists Error:", e)
 
