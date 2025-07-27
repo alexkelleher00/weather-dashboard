@@ -13,7 +13,7 @@ BLUETOOTH_DEVICE_NAME = "DJ Kells"
 SPOTIFY_CLIENT_ID = "e2b66ba1e9f4437183f74f37fe9bfbee"
 SPOTIFY_CLIENT_SECRET = "591a0dd14de549ef90b505adfb6e1388"
 SPOTIFY_REDIRECT_URI = "http://127.0.0.1:8888/callback"
-SPOTIFY_PLAYLIST_URI = "spotify:playlist:2lsjZmZSeeSERMKq8ARG6h?si=f87c0c9137f049cb"  # Replace with your playlist
+SPOTIFY_DJX_URI = "spotify:track:6wOmmoM5nyS6mOyzo9wDjC?si=95e2c80b09b649b4"  # Replace with actual DJ X URI
 
 class SpotifyTouchTunes:
     def __init__(self, root, back_callback):
@@ -23,12 +23,14 @@ class SpotifyTouchTunes:
         self.sp = None
         self.current_track = None
         self.album_img = None
+        self.shuffle_state = False
 
         self.setup_gui()
-        self.connect_bluetooth()
         self.init_spotify()
         self.start_playback()
         self.update_track_info()
+        self.show_device_buttons()
+        self.load_playlists()
 
     def setup_gui(self):
         self.album_label = tk.Label(self.root, bg="#101820")
@@ -43,38 +45,33 @@ class SpotifyTouchTunes:
         self.controls = tk.Frame(self.root, bg="#101820")
         self.controls.pack(pady=20)
 
-        self.back_button = tk.Button(self.controls, text="Back", command=self.back_callback)
-        self.back_button.pack(side=tk.LEFT, padx=10)
-
-        # Skip Previous Button
-        self.skip_prev_button = tk.Button(self.frame, text="⏮️ Prev", font=("Arial", 20), command=self.skip_previous)
+        self.skip_prev_button = tk.Button(self.controls, text="⏮️ Prev", font=("Arial", 20), command=self.skip_previous)
         self.skip_prev_button.grid(row=3, column=0, padx=10, pady=10)
 
-        # Play/Pause Button (already exists)
-        self.play_pause_button = tk.Button(self.frame, text="▶️", font=("Arial", 20), command=self.toggle_playback)
+        self.play_pause_button = tk.Button(self.controls, text="▶️", font=("Arial", 20), command=self.toggle_playback)
         self.play_pause_button.grid(row=3, column=1, padx=10, pady=10)
 
-        # Skip Next Button
-        self.skip_next_button = tk.Button(self.frame, text="⏭️ Next", font=("Arial", 20), command=self.skip_next)
+        self.skip_next_button = tk.Button(self.controls, text="⏭️ Next", font=("Arial", 20), command=self.skip_next)
         self.skip_next_button.grid(row=3, column=2, padx=10, pady=10)
 
+        self.shuffle_button = tk.Button(self.controls, text="🔀 Shuffle Off", font=("Arial", 14), command=self.toggle_shuffle)
+        self.shuffle_button.grid(row=3, column=3, padx=10, pady=10)
 
-    def connect_bluetooth(self):
-        def run():
-            print("Connecting to Bluetooth speaker...")
-            try:
-                subprocess.run(f"bluetoothctl connect $(bluetoothctl devices | grep '{BLUETOOTH_DEVICE_NAME}' | awk '{{print $2}}')", shell=True, check=True)
-                print("Bluetooth speaker connected.")
-            except subprocess.CalledProcessError:
-                print("Bluetooth connection failed.")
-        threading.Thread(target=run, daemon=True).start()
+        self.back_button = tk.Button(self.controls, text="Back", command=self.back_callback)
+        self.back_button.grid(row=3, column=4, padx=10, pady=10)
+
+        self.device_frame = tk.Frame(self.root, bg="#101820")
+        self.device_frame.pack(pady=10)
+
+        self.playlist_frame = tk.Frame(self.root, bg="#101820")
+        self.playlist_frame.pack(side=tk.RIGHT, padx=20)
 
     def init_spotify(self):
         self.sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
             client_id=SPOTIFY_CLIENT_ID,
             client_secret=SPOTIFY_CLIENT_SECRET,
             redirect_uri=SPOTIFY_REDIRECT_URI,
-            scope="user-read-playback-state user-modify-playback-state",
+            scope="user-read-playback-state user-modify-playback-state user-library-read",
             cache_path=".spotify_cache"
         ))
 
@@ -86,7 +83,7 @@ class SpotifyTouchTunes:
 
         device_id = devices[0]['id']
         try:
-            self.sp.start_playback(device_id=device_id, context_uri=SPOTIFY_PLAYLIST_URI)
+            self.sp.start_playback(device_id=device_id)
         except spotipy.SpotifyException as e:
             print(f"Error starting playback: {e}")
 
@@ -94,10 +91,16 @@ class SpotifyTouchTunes:
         playback = self.sp.current_playback()
         if playback and playback['is_playing']:
             self.sp.pause_playback()
-            self.play_button.config(text="Play")
+            self.play_pause_button.config(text="▶️")
         else:
             self.sp.start_playback()
-            self.play_button.config(text="Pause")
+            self.play_pause_button.config(text="⏸️")
+
+    def toggle_shuffle(self):
+        self.shuffle_state = not self.shuffle_state
+        self.sp.shuffle(state=self.shuffle_state)
+        text = "🔀 Shuffle On" if self.shuffle_state else "🔀 Shuffle Off"
+        self.shuffle_button.config(text=text)
 
     def update_track_info(self):
         def run():
@@ -125,18 +128,84 @@ class SpotifyTouchTunes:
 
         threading.Thread(target=run, daemon=True).start()
 
-
     def skip_next(self):
         try:
             self.sp.next_track()
-            self.update_playback()
         except Exception as e:
             print("Skip Next Error:", e)
 
     def skip_previous(self):
         try:
             self.sp.previous_track()
-            self.update_playback()
         except Exception as e:
             print("Skip Previous Error:", e)
 
+    def show_device_buttons(self):
+        try:
+            devices = self.sp.devices().get('devices', [])
+            if not devices:
+                print("No devices found.")
+                return
+
+            tk.Label(self.device_frame, text="Available Devices:", font=("Arial", 14), fg="white", bg="#101820").pack()
+
+            for device in devices:
+                btn = tk.Button(
+                    self.device_frame,
+                    text=device['name'],
+                    command=lambda d_id=device['id']: self.transfer_to_device(d_id),
+                    bg="#1DB954", fg="white", font=("Arial", 12)
+                )
+                btn.pack(pady=4)
+        except Exception as e:
+            print("Device fetch error:", e)
+
+    def transfer_to_device(self, device_id):
+        try:
+            self.sp.transfer_playback(device_id, force_play=True)
+            print(f"Transferred playback to {device_id}")
+        except Exception as e:
+            print("Transfer error:", e)
+
+    def load_playlists(self):
+        try:
+            playlists = self.sp.current_user_playlists(limit=20)['items']
+
+            liked_button = tk.Button(self.controls, text="❤️ Liked Songs", command=self.play_liked_songs, bg="#535353", fg="white")
+            liked_button.grid(row=4, column=0, padx=10, pady=10)
+
+            djx_button = tk.Button(self.controls, text="🎧 DJ X Playlist", command=lambda: self.play_playlist(SPOTIFY_DJX_URI), bg="#1DB954", fg="white")
+            djx_button.grid(row=4, column=1, padx=10, pady=10)
+            for playlist in playlists:
+                name = playlist['name']
+                if name == "Español dos":
+                    uri = playlist['uri']
+                    btn = tk.Button(self.controls, text=name, command=lambda u=uri: self.play_playlist(u), bg="#333", fg="white")
+                    btn.grid(row=4, column=2, padx=10, pady=10)
+        except Exception as e:
+            print("Load Playlists Error:", e)
+
+    def play_playlist(self, playlist_uri):
+        devices = self.sp.devices().get('devices', [])
+        if not devices:
+            print("No devices found.")
+            return
+        device_id = devices[0]['id']
+        self.sp.start_playback(device_id=device_id, context_uri=playlist_uri)
+
+    def play_liked_songs(self):
+        try:
+            results = self.sp.current_user_saved_tracks(limit=50)
+            track_uris = [item['track']['uri'] for item in results['items']]
+            if not track_uris:
+                print("No liked songs found.")
+                return
+
+            devices = self.sp.devices().get('devices', [])
+            if not devices:
+                print("No devices found.")
+                return
+            device_id = devices[0]['id']
+            self.sp.start_playback(device_id=device_id, uris=track_uris)
+        except Exception as e:
+            print("Error playing liked songs:", e)
