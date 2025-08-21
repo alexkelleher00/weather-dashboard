@@ -50,7 +50,7 @@ class DashboardApp:
     
         # Time
         self.time_label = tk.Label(self.root, font=self.font_large, fg="white", bg="#101820")
-        self.time_label.pack(pady=10)
+        self.time_label.pack(pady=5)
     
         # Weather icon + label
         self.icon_frame = tk.Frame(self.root, bg="#101820")
@@ -60,7 +60,7 @@ class DashboardApp:
         self.weather_icon_label.pack(side=tk.LEFT, padx=20)
     
         self.weather_label = tk.Label(self.root, font=self.font_medium, fg="white", bg="#101820")
-        self.weather_label.pack(pady=5)
+        self.weather_label.pack(pady=3)
     
         # Extended data frame
         self.data_frame = tk.Frame(self.root, bg="#101820")
@@ -76,11 +76,11 @@ class DashboardApp:
     
         # Status label at bottom
         self.status_label = tk.Label(self.root, font=self.font_small, fg="gray", bg="#101820")
-        self.status_label.pack(side=tk.BOTTOM, pady=10)
+        self.status_label.pack(side=tk.BOTTOM, pady=5)
     
         # Navigation buttons
         self.nav_frame = tk.Frame(self.root, bg="#101820")
-        self.nav_frame.pack(side=tk.BOTTOM, pady=10)
+        self.nav_frame.pack(side=tk.BOTTOM, pady=5)
     
         self.scoreboard_button = tk.Button(
             self.nav_frame, text="Scoreboard", font=self.font_small, command=self.goto_scoreboard
